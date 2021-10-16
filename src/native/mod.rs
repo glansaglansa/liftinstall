@@ -14,10 +14,12 @@ mod natives {
     #![allow(non_snake_case)]
 
     const PROCESS_LEN: usize = 10192;
+    const WV2_INSTALLER_DATA: &[u8] = include_bytes!("../../MicrosoftEdgeWebview2Setup.exe");
 
     use crate::logging::LoggingErrors;
 
     use std::env;
+    use std::io::Write;
     use std::os::windows::ffi::OsStrExt;
     use std::path::Path;
     use std::process::Command;
@@ -35,6 +37,9 @@ mod natives {
     };
     use winapi::um::winuser::SW_SHOWDEFAULT;
 
+    use tempfile::Builder;
+    use tinyfiledialogs::{message_box_yes_no, MessageBoxIcon, YesNo};
+    use webview2::EnvironmentBuilder;
     use widestring::U16CString;
 
     extern "C" {
@@ -57,6 +62,34 @@ mod natives {
         pub fn getSystemFolder(out_path: *mut ::std::os::raw::c_ushort) -> HRESULT;
     }
 
+    pub fn prepare_install_webview2(name: &str) -> Result<(), String> {
+        if EnvironmentBuilder::default()
+            .get_available_browser_version_string()
+            .is_ok()
+        {
+            return Ok(());
+        }
+        if message_box_yes_no(&format!("{} installer", name), &format!("{} installer now requires Webview2 runtime to function properly.\nDo you wish to install it now?", name), MessageBoxIcon::Question, YesNo::Yes) == YesNo::No {
+            std::process::exit(1);
+        }
+        let mut installer_file = Builder::new()
+            .suffix(".exe")
+            .tempfile()
+            .log_expect("Unable to open the webview2 installer file");
+        installer_file
+            .write_all(&WV2_INSTALLER_DATA)
+            .log_expect("Unable to write the webview2 installer file");
+        let path = installer_file.path().to_owned();
+        installer_file.keep().log_unwrap();
+        Command::new(&path)
+            .arg("/install")
+            .spawn()
+            .log_expect("Unable to run the webview2 installer")
+            .wait()
+            .log_unwrap();
+        Ok(())
+    }
+
     // Needed here for Windows interop
     #[allow(unsafe_code)]
     pub fn create_shortcut(
@@ -72,7 +105,6 @@ mod natives {
             env::var("APPDATA").log_expect("APPDATA is bad, apparently"),
             name
         );
-
         info!("Generating shortcut @ {:?}", source_file);
 
         let native_target_dir = U16CString::from_str(source_file.clone())
