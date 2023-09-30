@@ -1,11 +1,8 @@
 <img src="banner.png" width="400px" />
     
-[Usage Documentation](https://liftinstall.jselby.net/) 
-    - [Quick Start](https://liftinstall.jselby.net/quick-start) 
+[Usage Documentation](./docs/README.md) 
+    - [Quick Start](./docs/quick-start.md) 
     - [License](LICENSE)
-
-[![Build Status](https://travis-ci.org/j-selby/liftinstall.svg?branch=master)](https://travis-ci.org/j-selby/liftinstall)
-
 
 An installer for your application. Designed to be customisable to the core, hookable from external
  applications, and have a decent UI.
