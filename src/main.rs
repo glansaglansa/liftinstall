@@ -29,6 +29,7 @@ extern crate dirs;
 extern crate tar;
 extern crate xz2;
 extern crate zip;
+extern crate flate2;
 
 extern crate fern;
 #[macro_use]

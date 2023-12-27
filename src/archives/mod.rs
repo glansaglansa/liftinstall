@@ -12,6 +12,8 @@ use std::path::PathBuf;
 
 use xz2::read::XzDecoder;
 
+use flate2::read::GzDecoder as gz_decom;
+
 pub trait Archive<'a> {
     /// func: iterator value, max size, file name, file contents
     fn for_each(
@@ -99,6 +101,15 @@ pub fn read_archive<'a>(name: &str, data: &'a [u8]) -> Result<Box<dyn Archive<'a
             .map_err(|x| format!("Failed to decompress data: {:?}", x))?;
 
         let decompressed_contents: Box<dyn Read> = Box::new(Cursor::new(decompressed_data));
+
+        let tar = UpstreamTarArchive::new(decompressed_contents);
+
+        Ok(Box::new(TarArchive { archive: tar }))
+    } else if name.ends_with(".tar.gz") {
+        // Decompress a .tar.gz file
+        let decompressed_data = gz_decom::new(data);
+
+        let decompressed_contents: Box<Read> = Box::new(decompressed_data);
 
         let tar = UpstreamTarArchive::new(decompressed_contents);
 
